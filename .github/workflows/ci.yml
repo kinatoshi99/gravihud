@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  audit-test-build:
+    name: Security Audit, Unit Tests & macOS Build
+    runs-on: macos-15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Static Zero-Network & Zero-Shell Audit
+        run: |
+          chmod +x scripts/security-audit.sh
+          ./scripts/security-audit.sh
+
+      - name: Run Swift Unit Tests
+        run: |
+          swiftc -parse-as-library \
+            Sources/Models.swift \
+            Sources/Pricing.swift \
+            Sources/TranscriptParser.swift \
+            Sources/SettingsStore.swift \
+            Tests/run_tests.swift \
+            -o /tmp/gravihud_tests
+          /tmp/gravihud_tests
+
+      - name: Build GraviHUD.app
+        run: |
+          chmod +x build.sh
+          ./build.sh
+          test -x "build/GraviHUD.app/Contents/MacOS/GraviHUD"
+          test -f "build/GraviHUD.app/Contents/Resources/panel.html"
+          test -f "build/GraviHUD.app/Contents/Info.plist"

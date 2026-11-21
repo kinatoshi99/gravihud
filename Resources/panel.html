@@ -1,0 +1,1609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>GraviHUD</title>
+  <style>
+    :root {
+      --um-bg: transparent;
+      --um-card: rgba(255, 255, 255, 0.72);
+      --um-card-solid: #ffffff;
+      --um-muted: rgba(0, 0, 0, 0.055);
+      --um-border: rgba(0, 0, 0, 0.10);
+      --um-fg: #18181b;
+      --um-fg-muted: #52525b;
+      --um-primary: #2563eb;
+      --um-primary-fg: #ffffff;
+      --um-good: #16a34a;
+      --um-warn: #d97706;
+      --um-danger: #dc2626;
+      --um-seg-input: #3b82f6;
+      --um-seg-cache: #10b981;
+      --um-seg-output: #8b5cf6;
+      --um-radius: 10px;
+      --um-radius-sm: 7px;
+      --um-font-size: 12.5px;
+      --um-font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Thonburi", "Helvetica Neue", sans-serif;
+      --um-font-mono: ui-monospace, "SF Mono", Menlo, Monaco, monospace;
+    }
+
+    :root[data-theme="dark"] {
+      --um-card: rgba(34, 34, 38, 0.72);
+      --um-card-solid: #222226;
+      --um-muted: rgba(255, 255, 255, 0.08);
+      --um-border: rgba(255, 255, 255, 0.12);
+      --um-fg: #f4f4f5;
+      --um-fg-muted: #a1a1aa;
+      --um-primary: #60a5fa;
+      --um-primary-fg: #0b1120;
+      --um-good: #22c55e;
+      --um-warn: #f59e0b;
+      --um-danger: #ef4444;
+    }
+
+    :root[data-font="sm"] { --um-font-size: 11.5px; }
+    :root[data-font="md"] { --um-font-size: 12.5px; }
+    :root[data-font="lg"] { --um-font-size: 13.8px; }
+
+    :root[data-accent="blue"] { --um-primary: #2563eb; --um-primary-fg: #ffffff; }
+    :root[data-theme="dark"][data-accent="blue"] { --um-primary: #60a5fa; --um-primary-fg: #091326; }
+    :root[data-accent="emerald"] { --um-primary: #059669; --um-primary-fg: #ffffff; }
+    :root[data-theme="dark"][data-accent="emerald"] { --um-primary: #34d399; --um-primary-fg: #062118; }
+    :root[data-accent="violet"] { --um-primary: #7c3aed; --um-primary-fg: #ffffff; }
+    :root[data-theme="dark"][data-accent="violet"] { --um-primary: #a78bfa; --um-primary-fg: #1b0f35; }
+    :root[data-accent="amber"] { --um-primary: #d97706; --um-primary-fg: #ffffff; }
+    :root[data-theme="dark"][data-accent="amber"] { --um-primary: #fbbf24; --um-primary-fg: #261602; }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: transparent;
+      color: var(--um-fg);
+      font-family: var(--um-font-sans);
+      font-size: var(--um-font-size);
+      line-height: 1.45;
+      -webkit-font-smoothing: antialiased;
+      user-select: none;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+    }
+
+    .app-shell {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .topbar {
+      flex-shrink: 0;
+      padding: 8px 11px 0;
+      border-bottom: 1px solid var(--um-border);
+      background: transparent;
+    }
+
+    .conv-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+
+    .conv-select {
+      flex: 1;
+      min-width: 0;
+      height: 28px;
+      padding: 0 8px;
+      border-radius: var(--um-radius-sm);
+      border: 1px solid var(--um-border);
+      background: var(--um-card);
+      color: var(--um-fg);
+      font-family: inherit;
+      font-size: 0.92em;
+      outline: none;
+    }
+
+    .conv-select:focus { border-color: var(--um-primary); }
+
+    .icon-btn {
+      width: 28px;
+      height: 28px;
+      flex-shrink: 0;
+      border: 1px solid var(--um-border);
+      background: var(--um-card);
+      color: var(--um-fg-muted);
+      border-radius: var(--um-radius-sm);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.14s, color 0.14s;
+    }
+
+    .icon-btn:hover { background: var(--um-muted); color: var(--um-fg); }
+    .icon-btn.spinning svg { animation: spin 0.7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .tabs {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 2px;
+    }
+
+    .tab {
+      appearance: none;
+      border: none;
+      background: transparent;
+      color: var(--um-fg-muted);
+      font-family: inherit;
+      font-size: 0.92em;
+      font-weight: 500;
+      padding: 6px 4px 8px;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: color 0.14s, border-color 0.14s;
+    }
+
+    .tab:hover { color: var(--um-fg); }
+    .tab.active {
+      color: var(--um-fg);
+      font-weight: 600;
+      border-bottom-color: var(--um-primary);
+    }
+
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 11px;
+    }
+
+    .view { display: none; flex-direction: column; gap: 10px; }
+    .view.active { display: flex; }
+
+    .card {
+      background: var(--um-card);
+      border: 1px solid var(--um-border);
+      border-radius: var(--um-radius);
+      padding: 10px 11px;
+    }
+
+    .card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 7px;
+    }
+
+    .card-title {
+      font-size: 0.9em;
+      font-weight: 600;
+      color: var(--um-fg);
+    }
+
+    .card-sub {
+      font-size: 0.84em;
+      color: var(--um-fg-muted);
+    }
+
+    .status-strip {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 7px;
+      border-radius: 999px;
+      font-size: 0.82em;
+      font-weight: 500;
+      background: var(--um-muted);
+      color: var(--um-fg);
+      border: 1px solid var(--um-border);
+    }
+
+    .pill-mono {
+      font-family: var(--um-font-mono);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .pill-accent {
+      background: color-mix(in srgb, var(--um-primary) 16%, transparent);
+      color: var(--um-primary);
+      border-color: color-mix(in srgb, var(--um-primary) 30%, transparent);
+    }
+
+    .badge-offline {
+      font-size: 0.78em;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--um-good) 15%, transparent);
+      color: var(--um-good);
+      border: 1px solid color-mix(in srgb, var(--um-good) 32%, transparent);
+      white-space: nowrap;
+    }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .kpi-card {
+      background: var(--um-card);
+      border: 1px solid var(--um-border);
+      border-radius: var(--um-radius);
+      padding: 9px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .kpi-label {
+      font-size: 0.8em;
+      color: var(--um-fg-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .kpi-value {
+      font-family: var(--um-font-mono);
+      font-variant-numeric: tabular-nums;
+      font-size: 1.32em;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--um-fg);
+    }
+
+    .kpi-foot {
+      font-size: 0.78em;
+      color: var(--um-fg-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .tone-good { color: var(--um-good); }
+    .tone-warn { color: var(--um-warn); }
+    .tone-danger { color: var(--um-danger); }
+    .tone-info { color: var(--um-primary); }
+
+    .meter-track {
+      height: 8px;
+      border-radius: 999px;
+      background: var(--um-muted);
+      overflow: hidden;
+      display: flex;
+    }
+
+    .meter-fill {
+      height: 100%;
+      background: var(--um-primary);
+      border-radius: 999px;
+      transition: width 0.25s ease;
+    }
+
+    .meter-fill.warn { background: var(--um-warn); }
+    .meter-fill.danger { background: var(--um-danger); }
+
+    .seg-input { background: var(--um-seg-input); }
+    .seg-cache { background: var(--um-seg-cache); }
+    .seg-output { background: var(--um-seg-output); }
+
+    .legend-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 11px;
+      margin-top: 7px;
+      font-size: 0.8em;
+      color: var(--um-fg-muted);
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .swatch {
+      width: 8px;
+      height: 8px;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+
+    .list-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .bar-item {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .bar-item-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+      font-size: 0.86em;
+    }
+
+    .bar-item-name {
+      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .bar-item-meta {
+      font-family: var(--um-font-mono);
+      font-variant-numeric: tabular-nums;
+      font-size: 0.88em;
+      color: var(--um-fg-muted);
+      white-space: nowrap;
+    }
+
+    .mini-track {
+      height: 5px;
+      border-radius: 999px;
+      background: var(--um-muted);
+      overflow: hidden;
+    }
+
+    .mini-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: var(--um-primary);
+    }
+
+    .chip-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+
+    .chip {
+      font-family: var(--um-font-mono);
+      font-size: 0.78em;
+      padding: 2px 7px;
+      border-radius: 6px;
+      background: var(--um-muted);
+      border: 1px solid var(--um-border);
+      color: var(--um-fg);
+    }
+
+    .chip-count { color: var(--um-fg-muted); margin-left: 2px; }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .segmented {
+      display: inline-flex;
+      background: var(--um-muted);
+      border: 1px solid var(--um-border);
+      border-radius: var(--um-radius-sm);
+      padding: 2px;
+      gap: 2px;
+    }
+
+    .seg-btn {
+      appearance: none;
+      border: none;
+      background: transparent;
+      color: var(--um-fg-muted);
+      font-family: inherit;
+      font-size: 0.82em;
+      font-weight: 500;
+      padding: 4px 8px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .seg-btn.active {
+      background: var(--um-card-solid);
+      color: var(--um-fg);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+    }
+
+    .search-input {
+      flex: 1;
+      min-width: 110px;
+      height: 28px;
+      padding: 0 9px;
+      border-radius: var(--um-radius-sm);
+      border: 1px solid var(--um-border);
+      background: var(--um-card);
+      color: var(--um-fg);
+      font-family: inherit;
+      font-size: 0.88em;
+      outline: none;
+      user-select: text;
+    }
+
+    .search-input:focus { border-color: var(--um-primary); }
+
+    .chart-wrap { position: relative; width: 100%; }
+    .chart-svg { width: 100%; height: 126px; display: block; }
+    .chart-tooltip {
+      margin-top: 5px;
+      font-size: 0.79em;
+      color: var(--um-fg-muted);
+      font-family: var(--um-font-mono);
+      min-height: 16px;
+    }
+
+    .conv-row {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: 7px 9px;
+      border-radius: var(--um-radius-sm);
+      border: 1px solid var(--um-border);
+      background: var(--um-card);
+      cursor: pointer;
+      text-align: left;
+      color: inherit;
+      font-family: inherit;
+      width: 100%;
+    }
+
+    .conv-row:hover { border-color: var(--um-primary); }
+    .conv-row.selected {
+      border-color: var(--um-primary);
+      background: color-mix(in srgb, var(--um-primary) 10%, var(--um-card));
+    }
+
+    .conv-row-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .conv-row-title {
+      font-weight: 500;
+      font-size: 0.88em;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .conv-row-meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 0.78em;
+      color: var(--um-fg-muted);
+      font-family: var(--um-font-mono);
+    }
+
+    .step-card {
+      background: var(--um-card);
+      border: 1px solid var(--um-border);
+      border-radius: var(--um-radius-sm);
+      padding: 8px 9px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .step-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .step-left { display: flex; align-items: center; gap: 6px; min-width: 0; }
+    .step-num {
+      font-family: var(--um-font-mono);
+      font-size: 0.78em;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 4px;
+      background: var(--um-muted);
+      color: var(--um-fg-muted);
+    }
+
+    .step-model { font-weight: 600; font-size: 0.88em; }
+    .step-time {
+      font-family: var(--um-font-mono);
+      font-size: 0.76em;
+      color: var(--um-fg-muted);
+    }
+
+    .step-metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 4px;
+      font-family: var(--um-font-mono);
+      font-size: 0.78em;
+    }
+
+    .step-metric {
+      background: var(--um-muted);
+      border-radius: 5px;
+      padding: 3px 5px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .step-metric-label { font-family: var(--um-font-sans); font-size: 0.82em; color: var(--um-fg-muted); }
+    .step-metric-val { font-weight: 600; }
+
+    .setting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--um-border);
+    }
+
+    .setting-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .setting-label { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .setting-name { font-weight: 500; font-size: 0.9em; }
+    .setting-desc { font-size: 0.79em; color: var(--um-fg-muted); }
+
+    .accent-dots { display: flex; gap: 6px; align-items: center; }
+    .accent-dot {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      cursor: pointer;
+      padding: 0;
+    }
+    .accent-dot.active { box-shadow: 0 0 0 2px var(--um-card-solid), 0 0 0 4px var(--um-fg); }
+
+    .audit-box {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 0.83em;
+      user-select: text;
+    }
+
+    .audit-path {
+      font-family: var(--um-font-mono);
+      font-size: 0.82em;
+      color: var(--um-fg-muted);
+      word-break: break-all;
+      background: var(--um-muted);
+      padding: 4px 6px;
+      border-radius: 5px;
+    }
+
+    .btn-secondary {
+      appearance: none;
+      border: 1px solid var(--um-border);
+      background: var(--um-card);
+      color: var(--um-fg);
+      font-family: inherit;
+      font-size: 0.86em;
+      font-weight: 500;
+      padding: 6px 11px;
+      border-radius: var(--um-radius-sm);
+      cursor: pointer;
+    }
+
+    .btn-secondary:hover { background: var(--um-muted); }
+
+    .note-box {
+      font-size: 0.81em;
+      color: var(--um-fg-muted);
+      background: var(--um-muted);
+      border-radius: var(--um-radius-sm);
+      padding: 8px 9px;
+      line-height: 1.5;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 26px 14px;
+      color: var(--um-fg-muted);
+      font-size: 0.9em;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--um-fg);
+      color: var(--um-card-solid);
+      font-size: 0.82em;
+      font-weight: 500;
+      padding: 5px 11px;
+      border-radius: 999px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+      pointer-events: none;
+      z-index: 50;
+    }
+
+    .toast.hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div id="app" class="app-shell">
+    <div class="topbar">
+      <div class="conv-bar">
+        <label class="sr-only" for="conv-select" id="conv-select-label">Select conversation</label>
+        <select id="conv-select" class="conv-select"></select>
+        <button type="button" class="icon-btn" id="refresh-btn" title="Refresh now" aria-label="Refresh now">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M13.5 8a5.5 5.5 0 1 1-1.4-3.65"/>
+            <path d="M13.5 2.5v2.75h-2.75"/>
+          </svg>
+        </button>
+      </div>
+
+      <nav class="tabs" role="tablist" aria-label="Views">
+        <button type="button" role="tab" class="tab active" data-tab="overview" aria-selected="true" id="tab-overview">Overview</button>
+        <button type="button" role="tab" class="tab" data-tab="history" aria-selected="false" id="tab-history">History</button>
+        <button type="button" role="tab" class="tab" data-tab="steps" aria-selected="false" id="tab-steps">Steps</button>
+        <button type="button" role="tab" class="tab" data-tab="settings" aria-selected="false" id="tab-settings">Settings</button>
+      </nav>
+    </div>
+
+    <main class="content" id="main-content">
+      <section id="view-overview" class="view active" role="tabpanel" aria-labelledby="tab-overview"></section>
+      <section id="view-history" class="view" role="tabpanel" aria-labelledby="tab-history"></section>
+      <section id="view-steps" class="view" role="tabpanel" aria-labelledby="tab-steps"></section>
+      <section id="view-settings" class="view" role="tabpanel" aria-labelledby="tab-settings"></section>
+    </main>
+
+    <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+  </div>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const I18N = {
+        th: {
+          offlineBadge: 'ออฟไลน์ 100%',
+          refreshTitle: 'รีเฟรชข้อมูล',
+          selectConv: 'เลือกบทสนทนา',
+          autoFollowOpt: 'ติดตามแชทล่าสุดอัตโนมัติ',
+          tabOverview: 'ภาพรวม',
+          tabHistory: 'ประวัติ',
+          tabSteps: 'ทีละขั้น',
+          tabSettings: 'ตั้งค่า',
+          statusActive: 'กำลังทำงาน',
+          statusIdle: 'พักอยู่',
+          turns: 'รอบถาม',
+          calls: 'เรียกโมเดล',
+          subagents: 'ผู้ช่วยย่อย',
+          kpiSessionTokens: 'โทเคนรวมแชทนี้',
+          kpiCacheHit: 'อัตราอ่านแคช',
+          kpiLatestCtx: 'ความจำรอบล่าสุด',
+          kpiEstCost: '~ค่า API อ้างอิง',
+          savedByCache: 'ประหยัดจากแคช ~{usd}',
+          cacheTokensSub: 'อ่านจากแคช {tok}',
+          refLimitSub: 'เพดานอ้างอิง {limit}',
+          estNoteSub: 'ประมาณการ ไม่ใช่โควต้าจริง',
+          unpriced: 'ไม่ทราบราคา',
+          compositionTitle: 'สัดส่วนโทเคนของแชทนี้',
+          segInput: 'เข้าใหม่',
+          segCache: 'อ่านแคช',
+          segOutput: 'สร้างคำตอบ',
+          modelsInChat: 'โมเดลที่ใช้ในแชทนี้',
+          toolsUsed: 'เครื่องมือที่เรียกใช้',
+          noTools: 'ยังไม่มีการเรียกใช้เครื่องมือ',
+          noChatTitle: 'ยังไม่พบไฟล์บันทึกแชทในเครื่อง',
+          noChatDesc: 'เมื่อมีการสนทนาใน Antigravity สถิติจะอัปเดตให้อัตโนมัติ',
+          rangeToday: 'วันนี้',
+          range7d: '7 วัน',
+          range30d: '30 วัน',
+          rangeAll: 'ทั้งหมด',
+          histTokens: 'โทเคนรวม',
+          histChats: 'แชท',
+          histCalls: 'เรียกโมเดล',
+          histTrend: 'แนวโน้มการใช้โทเคน',
+          histHoverHint: 'เลื่อนเมาส์บนแท่งกราฟเพื่อดูรายละเอียด',
+          histModels: 'อันดับการใช้งานตามโมเดล',
+          histRecent: 'แชทล่าสุดในเครื่อง',
+          noDataRange: 'ยังไม่มีข้อมูลการใช้งานในช่วงเวลานี้',
+          searchSteps: 'ค้นหาชื่อโมเดลหรือเครื่องมือ…',
+          orderNewest: 'ใหม่สุดก่อน',
+          orderOldest: 'เก่าสุดก่อน',
+          stepInput: 'เข้าใหม่',
+          stepCache: 'อ่านแคช',
+          stepOutput: 'คำตอบ',
+          stepTotal: 'รวมรอบนี้',
+          noSteps: 'ยังไม่มีรายการเรียกโมเดลในแชทนี้',
+          thinkingTag: 'คิดวิเคราะห์',
+          subagentTag: 'ผู้ช่วยย่อย',
+          setFloatingTitle: 'การทำงานของแผงลอย GraviHUD',
+          setAutoShow: 'โผล่เฉพาะตอนใช้ Antigravity',
+          setAutoShowDesc: 'ซ่อนแผงอัตโนมัติทันทีเมื่อสลับไปแอปอื่น',
+          optOnlyAgy: 'เฉพาะ Antigravity',
+          optAlways: 'ลอยทุกแอป',
+          setDockSide: 'ตำแหน่งขอบหน้าจอ',
+          dockRight: 'ขอบขวา',
+          dockLeft: 'ขอบซ้าย',
+          setAppearance: 'หน้าตาและการแสดงผล',
+          setLang: 'ภาษาหน้าจอ',
+          setFont: 'ขนาดตัวอักษร',
+          fontSm: 'เล็ก',
+          fontMd: 'ปกติ',
+          fontLg: 'ใหญ่',
+          setAccent: 'สีเน้น',
+          setModelMode: 'รูปแบบชื่อโมเดล',
+          modelShort: 'แบบย่อ',
+          modelFull: 'ชื่อเต็ม',
+          setCtxLimit: 'เพดานอ้างอิงแถบความจำ',
+          setCtxLimitDesc: 'ใช้วัดเปอร์เซ็นต์แถบความจำเท่านั้น ไม่แก้การตั้งค่าแอป',
+          setSecurityTitle: 'สถานะความปลอดภัย (ออฟไลน์ 100%)',
+          setSecurityChecks: [
+            'ไม่เชื่อมต่ออินเทอร์เน็ตและไม่เปิดพอร์ตเครือข่ายใดๆ (Zero Network & Zero Ports)',
+            'ทำงานแยกเป็นหน้าต่าง macOS ไม่เจาะ ไม่แทรกแซงตัวแอป Antigravity',
+            'ไม่ขอสิทธิ์ Accessibility ไม่ขอสิทธิ์อัดหน้าจอ ไม่อ่านรหัสผ่านหรือบัญชี Google',
+            'อ่านอย่างเดียว (Read-only) จากไฟล์ transcript.jsonl ในเครื่องของคุณเท่านั้น',
+          ],
+          setReadDir: 'โฟลเดอร์ที่อ่าน (Read-only)',
+          setSettingsFile: 'ไฟล์ตั้งค่าส่วนตัวของ GraviHUD',
+          setScanned: 'สแกนพบ {n} บทสนทนา · ตารางราคาออฟไลน์ {p} รายการ',
+          setLimitations: 'ข้อจำกัดที่ตั้งใจเว้นไว้เพื่อความปลอดภัย: ไม่แสดงเปอร์เซ็นต์โควต้าคงเหลือ 5 ชม./รายสัปดาห์ เพราะไม่เข้าถึงบัญชีหรือหลังบ้านของแอป',
+          resetBtn: 'รีเซ็ตการตั้งค่าเริ่มต้น',
+          savedToast: 'บันทึกการตั้งค่าแล้ว',
+          resetToast: 'รีเซ็ตการตั้งค่าเรียบร้อย',
+          stepsUnit: 'ครั้ง',
+        },
+        en: {
+          offlineBadge: '100% Offline',
+          refreshTitle: 'Refresh now',
+          selectConv: 'Select conversation',
+          autoFollowOpt: 'Auto-follow latest chat',
+          tabOverview: 'Overview',
+          tabHistory: 'History',
+          tabSteps: 'Steps',
+          tabSettings: 'Settings',
+          statusActive: 'Active',
+          statusIdle: 'Idle',
+          turns: 'turns',
+          calls: 'calls',
+          subagents: 'subagents',
+          kpiSessionTokens: 'Session Tokens',
+          kpiCacheHit: 'Cache Hit Rate',
+          kpiLatestCtx: 'Latest Context',
+          kpiEstCost: '~Ref. API Cost',
+          savedByCache: 'Cache saved ~{usd}',
+          cacheTokensSub: '{tok} cached',
+          refLimitSub: 'vs {limit} ref limit',
+          estNoteSub: 'Estimate, not quota',
+          unpriced: 'Unpriced',
+          compositionTitle: 'Session Token Breakdown',
+          segInput: 'New Input',
+          segCache: 'Cache Read',
+          segOutput: 'Output',
+          modelsInChat: 'Models Used in Chat',
+          toolsUsed: 'Tools Invoked',
+          noTools: 'No tool calls recorded yet',
+          noChatTitle: 'No local transcripts found yet',
+          noChatDesc: 'Start chatting in Antigravity and stats will appear here automatically.',
+          rangeToday: 'Today',
+          range7d: '7D',
+          range30d: '30D',
+          rangeAll: 'All',
+          histTokens: 'Total Tokens',
+          histChats: 'Chats',
+          histCalls: 'Calls',
+          histTrend: 'Token Usage Trend',
+          histHoverHint: 'Hover a bar to inspect exact counts',
+          histModels: 'Usage by Model',
+          histRecent: 'Recent Local Chats',
+          noDataRange: 'No usage recorded in this period',
+          searchSteps: 'Filter by model or tool…',
+          orderNewest: 'Newest',
+          orderOldest: 'Oldest',
+          stepInput: 'Input',
+          stepCache: 'Cache',
+          stepOutput: 'Output',
+          stepTotal: 'Total',
+          noSteps: 'No model calls in this conversation yet',
+          thinkingTag: 'Thinking',
+          subagentTag: 'Subagent',
+          setFloatingTitle: 'GraviHUD Floating Panel',
+          setAutoShow: 'Only when Antigravity is active',
+          setAutoShowDesc: 'Auto-hides immediately when you switch to another app',
+          optOnlyAgy: 'Antigravity only',
+          optAlways: 'All apps',
+          setDockSide: 'Screen Edge Dock',
+          dockRight: 'Right edge',
+          dockLeft: 'Left edge',
+          setAppearance: 'Display & Preferences',
+          setLang: 'Language',
+          setFont: 'Font Size',
+          fontSm: 'Small',
+          fontMd: 'Normal',
+          fontLg: 'Large',
+          setAccent: 'Accent Color',
+          setModelMode: 'Model Name Style',
+          modelShort: 'Short',
+          modelFull: 'Full ID',
+          setCtxLimit: 'Context Meter Reference',
+          setCtxLimitDesc: 'Visual gauge reference only — never changes Antigravity settings',
+          setSecurityTitle: 'Security Status (100% Offline)',
+          setSecurityChecks: [
+            'Zero internet access and zero open network ports',
+            'Independent macOS window — never injects into or modifies Antigravity',
+            'Zero Accessibility/Screen Recording permissions and zero Google credential access',
+            'Read-only scanning of local transcript.jsonl files only',
+          ],
+          setReadDir: 'Read-only transcript folder',
+          setSettingsFile: 'GraviHUD settings file',
+          setScanned: 'Scanned {n} conversations · {p} offline reference rates',
+          setLimitations: 'Intentional safety boundary: does not query account 5h/weekly quota percentages.',
+          resetBtn: 'Reset to Defaults',
+          savedToast: 'Settings saved',
+          resetToast: 'Settings reset',
+          stepsUnit: 'calls',
+        },
+      };
+
+      const state = {
+        tab: 'overview',
+        stepQuery: '',
+        data: null,
+        toastTimer: null,
+      };
+
+      const $ = (id) => document.getElementById(id);
+
+      function postNative(type, payload = {}) {
+        try {
+          window.webkit?.messageHandlers?.gravihud?.postMessage({ type, ...payload });
+        } catch {
+          // Ignore when opened outside native host
+        }
+      }
+
+      function lang() {
+        return state.data?.settings?.language === 'th' ? 'th' : 'en';
+      }
+
+      function t(key, vars = null) {
+        const dict = I18N[lang()] || I18N.en;
+        let val = dict[key] ?? I18N.en[key] ?? key;
+        if (typeof val === 'string' && vars) {
+          for (const [k, v] of Object.entries(vars)) {
+            val = val.replace(`{${k}}`, String(v));
+          }
+        }
+        return val;
+      }
+
+      function esc(str) {
+        return String(str ?? '').replace(/[&<>"']/g, (c) => ({
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#39;',
+        }[c]));
+      }
+
+      function fmtTokens(n) {
+        const num = Number(n) || 0;
+        if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(2)}M`;
+        if (num >= 10_000) return `${(num / 1_000).toFixed(1)}K`;
+        if (num >= 1_000) return `${(num / 1_000).toFixed(2)}K`;
+        return String(Math.round(num));
+      }
+
+      function fmtUsd(val) {
+        if (val === null || val === undefined || !Number.isFinite(Number(val))) return '--';
+        const num = Number(val);
+        if (num === 0) return '$0.00';
+        if (num < 0.01) return `$${num.toFixed(4)}`;
+        return `$${num.toFixed(2)}`;
+      }
+
+      function fmtClock(ms) {
+        if (!Number.isFinite(ms) || ms <= 0) return '--';
+        return new Date(ms).toLocaleTimeString(lang() === 'th' ? 'th-TH' : 'en-US', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false,
+        });
+      }
+
+      function fmtShortDate(ms) {
+        if (!Number.isFinite(ms) || ms <= 0) return '';
+        return new Date(ms).toLocaleString(lang() === 'th' ? 'th-TH' : 'en-US', {
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+        });
+      }
+
+      function displayModel(rawModel, shortModel) {
+        return state.data?.settings?.modelNameMode === 'full'
+          ? (rawModel || shortModel || 'unknown')
+          : (shortModel || rawModel || 'unknown');
+      }
+
+      function showToast(msg) {
+        const el = $('toast');
+        if (!el) return;
+        el.textContent = msg;
+        el.classList.remove('hidden');
+        clearTimeout(state.toastTimer);
+        state.toastTimer = setTimeout(() => el.classList.add('hidden'), 1700);
+      }
+
+      function applyAppearance(settings, darkMode) {
+        if (typeof darkMode === 'boolean') {
+          document.documentElement.dataset.theme = darkMode ? 'dark' : 'light';
+        } else {
+          const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          document.documentElement.dataset.theme = prefersDark ? 'dark' : 'light';
+        }
+        if (!settings) return;
+        document.documentElement.lang = settings.language === 'th' ? 'th' : 'en';
+        document.documentElement.dataset.font = settings.fontScale || 'md';
+        if (settings.accent && settings.accent !== 'host') {
+          document.documentElement.dataset.accent = settings.accent;
+        } else {
+          delete document.documentElement.dataset.accent;
+        }
+      }
+
+      function renderChrome() {
+        $('refresh-btn').title = t('refreshTitle');
+        $('refresh-btn').setAttribute('aria-label', t('refreshTitle'));
+        $('conv-select-label').textContent = t('selectConv');
+        $('tab-overview').textContent = t('tabOverview');
+        $('tab-history').textContent = t('tabHistory');
+        $('tab-steps').textContent = t('tabSteps');
+        $('tab-settings').textContent = t('tabSettings');
+
+        const select = $('conv-select');
+        const list = state.data?.conversations || [];
+        const mode = state.data?.selectedConvMode || 'auto';
+        const activeId = state.data?.activeConversation?.conversationId || '';
+        const selectedVal = mode === 'auto' ? 'auto' : activeId;
+
+        const sig = `${lang()}|${selectedVal}|` + list.map((c) => `${c.conversationId}:${c.title}:${c.totalTokens}:${c.isActive}`).join('|');
+        if (select.dataset.sig !== sig) {
+          select.dataset.sig = sig;
+          const opts = [`<option value="auto"${selectedVal === 'auto' ? ' selected' : ''}>✦ ${esc(t('autoFollowOpt'))}</option>`];
+          for (const c of list) {
+            const mark = c.isActive ? '● ' : '';
+            const label = `${mark}${c.title} (${fmtTokens(c.totalTokens)})`;
+            const sel = selectedVal === c.conversationId ? ' selected' : '';
+            opts.push(`<option value="${esc(c.conversationId)}"${sel}>${esc(label)}</option>`);
+          }
+          select.innerHTML = opts.join('');
+        }
+      }
+
+      function renderOverview() {
+        const el = $('view-overview');
+        const conv = state.data?.activeConversation;
+        const settings = state.data?.settings || {};
+
+        if (!conv) {
+          el.innerHTML = `
+            <div class="card empty-state">
+              <div style="font-weight:600;margin-bottom:4px;">${esc(t('noChatTitle'))}</div>
+              <div>${esc(t('noChatDesc'))}</div>
+            </div>`;
+          return;
+        }
+
+        const totals = conv.totals;
+        const latest = conv.latestStep;
+        const refLimit = Number(settings.contextRefLimit) || 256000;
+        const latestCtx = latest ? latest.contextTokens : 0;
+        const ctxPct = refLimit > 0 ? Math.min(100, +((latestCtx / refLimit) * 100).toFixed(1)) : 0;
+        const ctxTone = ctxPct >= 85 ? 'danger' : ctxPct >= 65 ? 'warn' : '';
+        const cacheTone = totals.cacheHitPct >= 75 ? 'tone-good' : totals.cacheHitPct >= 40 ? 'tone-info' : 'tone-warn';
+
+        const sumTok = Math.max(1, totals.totalTokens);
+        const pctIn = +((totals.inputTokens / sumTok) * 100).toFixed(1);
+        const pctCache = +((totals.cacheReadTokens / sumTok) * 100).toFixed(1);
+        const pctOut = Math.max(0, +(100 - pctIn - pctCache).toFixed(1));
+
+        const maxModelTok = Math.max(1, ...(conv.models || []).map((m) => m.totalTokens));
+        const modelRowsHtml = (conv.models || [])
+          .map((m) => {
+            const w = Math.max(3, Math.round((m.totalTokens / maxModelTok) * 100));
+            return `
+              <div class="bar-item">
+                <div class="bar-item-head">
+                  <span class="bar-item-name">${esc(displayModel(m.model, m.modelShort))}</span>
+                  <span class="bar-item-meta">${esc(fmtTokens(m.totalTokens))} · ${m.steps} ${esc(t('stepsUnit'))}${m.costUsd !== null && m.costUsd !== undefined ? ` · ~${esc(fmtUsd(m.costUsd))}` : ''}</span>
+                </div>
+                <div class="mini-track"><div class="mini-fill" style="width:${w}%"></div></div>
+              </div>`;
+          })
+          .join('');
+
+        const toolsHtml = conv.topTools && conv.topTools.length > 0
+          ? `<div class="chip-wrap">${conv.topTools.map((tl) => `<span class="chip">${esc(tl.name)} <span class="chip-count">×${tl.count}</span></span>`).join('')}</div>`
+          : `<div class="card-sub">${esc(t('noTools'))}</div>`;
+
+        el.innerHTML = `
+          <div class="status-strip">
+            <span class="pill pill-accent">${esc(latest ? displayModel(latest.model, latest.modelShort) : '--')}</span>
+            <span class="pill">${conv.isActive ? esc(t('statusActive')) : esc(t('statusIdle'))}</span>
+            <span class="pill pill-mono">${conv.userTurns} ${esc(t('turns'))} · ${conv.modelStepCount} ${esc(t('calls'))}</span>
+            ${conv.subagentCallsTotal > 0 ? `<span class="pill pill-mono">${conv.subagentCallsTotal} ${esc(t('subagents'))}</span>` : ''}
+          </div>
+
+          <div class="kpi-grid">
+            <div class="kpi-card">
+              <span class="kpi-label">${esc(t('kpiSessionTokens'))}</span>
+              <span class="kpi-value">${esc(fmtTokens(totals.totalTokens))}</span>
+              <span class="kpi-foot">${esc(t('segInput'))} ${esc(fmtTokens(totals.inputTokens))} · ${esc(t('segOutput'))} ${esc(fmtTokens(totals.outputTokens))}</span>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-label">${esc(t('kpiCacheHit'))}</span>
+              <span class="kpi-value ${cacheTone}">${totals.cacheHitPct}%</span>
+              <span class="kpi-foot">${esc(t('cacheTokensSub', { tok: fmtTokens(totals.cacheReadTokens) }))}</span>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-label">${esc(t('kpiLatestCtx'))}</span>
+              <span class="kpi-value ${ctxTone ? `tone-${ctxTone}` : ''}">${esc(fmtTokens(latestCtx))}</span>
+              <span class="kpi-foot">${ctxPct}% · ${esc(t('refLimitSub', { limit: fmtTokens(refLimit) }))}</span>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-label">${esc(t('kpiEstCost'))}</span>
+              <span class="kpi-value">${totals.costUsd !== null && totals.costUsd !== undefined ? esc(fmtUsd(totals.costUsd)) : esc(t('unpriced'))}</span>
+              <span class="kpi-foot">${totals.savedUsd ? esc(t('savedByCache', { usd: fmtUsd(totals.savedUsd) })) : esc(t('estNoteSub'))}</span>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <span class="card-title">${esc(t('kpiLatestCtx'))}</span>
+              <span class="card-sub pill-mono">${esc(fmtTokens(latestCtx))} / ${esc(fmtTokens(refLimit))} (${ctxPct}%)</span>
+            </div>
+            <div class="meter-track">
+              <div class="meter-fill ${ctxTone}" style="width:${ctxPct}%"></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <span class="card-title">${esc(t('compositionTitle'))}</span>
+              <span class="card-sub pill-mono">${esc(fmtTokens(totals.totalTokens))}</span>
+            </div>
+            <div class="meter-track">
+              <div class="seg-input" style="width:${pctIn}%"></div>
+              <div class="seg-cache" style="width:${pctCache}%"></div>
+              <div class="seg-output" style="width:${pctOut}%"></div>
+            </div>
+            <div class="legend-row">
+              <span class="legend-item"><span class="swatch seg-input"></span>${esc(t('segInput'))}: <strong class="pill-mono">${esc(fmtTokens(totals.inputTokens))}</strong> (${pctIn}%)</span>
+              <span class="legend-item"><span class="swatch seg-cache"></span>${esc(t('segCache'))}: <strong class="pill-mono">${esc(fmtTokens(totals.cacheReadTokens))}</strong> (${pctCache}%)</span>
+              <span class="legend-item"><span class="swatch seg-output"></span>${esc(t('segOutput'))}: <strong class="pill-mono">${esc(fmtTokens(totals.outputTokens))}</strong> (${pctOut}%)</span>
+            </div>
+          </div>
+
+          ${modelRowsHtml ? `
+          <div class="card">
+            <div class="card-head"><span class="card-title">${esc(t('modelsInChat'))}</span></div>
+            <div class="list-stack">${modelRowsHtml}</div>
+          </div>` : ''}
+
+          <div class="card">
+            <div class="card-head"><span class="card-title">${esc(t('toolsUsed'))}</span></div>
+            ${toolsHtml}
+          </div>
+        `;
+      }
+
+      function buildTrendSvg(series) {
+        if (!Array.isArray(series) || series.length === 0) {
+          return `<div class="empty-state">${esc(t('noDataRange'))}</div>`;
+        }
+        const maxVal = Math.max(1, ...series.map((b) => b.totalTokens));
+        const W = 380;
+        const H = 126;
+        const padB = 22;
+        const padT = 8;
+        const chartH = H - padB - padT;
+        const count = series.length;
+        const slotW = W / count;
+        const barW = Math.max(4, Math.min(20, slotW * 0.68));
+        const labelEvery = count > 20 ? 5 : count > 10 ? 3 : 1;
+
+        const bars = series
+          .map((b, idx) => {
+            const x = idx * slotW + (slotW - barW) / 2;
+            const totalH = (b.totalTokens / maxVal) * chartH;
+            const hOut = (b.outputTokens / maxVal) * chartH;
+            const hCache = (b.cacheReadTokens / maxVal) * chartH;
+            const hIn = Math.max(0, totalH - hOut - hCache);
+            const yIn = padT + chartH - hIn;
+            const yCache = yIn - hCache;
+            const yOut = yCache - hOut;
+            const showLabel = idx % labelEvery === 0 || idx === count - 1;
+            const label = showLabel
+              ? `<text x="${(x + barW / 2).toFixed(1)}" y="${H - 5}" text-anchor="middle" font-size="9" fill="currentColor" opacity="0.65">${esc(b.label)}</text>`
+              : '';
+            return `
+              <g class="chart-bar-group" data-idx="${idx}" style="cursor:pointer;">
+                <rect x="${(idx * slotW).toFixed(1)}" y="${padT}" width="${slotW.toFixed(1)}" height="${chartH}" fill="transparent"/>
+                ${hIn > 0 ? `<rect x="${x.toFixed(1)}" y="${yIn.toFixed(1)}" width="${barW.toFixed(1)}" height="${hIn.toFixed(1)}" rx="1.5" fill="var(--um-seg-input)"/>` : ''}
+                ${hCache > 0 ? `<rect x="${x.toFixed(1)}" y="${yCache.toFixed(1)}" width="${barW.toFixed(1)}" height="${hCache.toFixed(1)}" rx="1.5" fill="var(--um-seg-cache)"/>` : ''}
+                ${hOut > 0 ? `<rect x="${x.toFixed(1)}" y="${yOut.toFixed(1)}" width="${barW.toFixed(1)}" height="${hOut.toFixed(1)}" rx="1.5" fill="var(--um-seg-output)"/>` : ''}
+                ${label}
+              </g>`;
+          })
+          .join('');
+
+        return `
+          <div class="chart-wrap">
+            <svg class="chart-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="${esc(t('histTrend'))}">
+              <line x1="0" y1="${padT + chartH}" x2="${W}" y2="${padT + chartH}" stroke="currentColor" opacity="0.14" stroke-width="1"/>
+              ${bars}
+            </svg>
+            <div class="chart-tooltip" id="chart-tooltip">${esc(t('histHoverHint'))}</div>
+          </div>`;
+      }
+
+      function renderHistory() {
+        const el = $('view-history');
+        const hist = state.data?.history;
+        const convs = state.data?.conversations || [];
+        const activeId = state.data?.activeConversation?.conversationId || '';
+        const currentRange = hist?.range || '7d';
+
+        const ranges = [
+          ['today', t('rangeToday')],
+          ['7d', t('range7d')],
+          ['30d', t('range30d')],
+          ['all', t('rangeAll')],
+        ];
+        const rangeBtns = ranges
+          .map(([k, lbl]) => `<button type="button" class="seg-btn${currentRange === k ? ' active' : ''}" data-range="${k}">${esc(lbl)}</button>`)
+          .join('');
+
+        if (!hist) {
+          el.innerHTML = `<div class="card empty-state">${esc(t('noDataRange'))}</div>`;
+          return;
+        }
+
+        const maxMod = Math.max(1, ...(hist.models || []).map((m) => m.totalTokens));
+        const modelRows = (hist.models || []).length
+          ? hist.models
+              .map((m) => {
+                const w = Math.max(3, Math.round((m.totalTokens / maxMod) * 100));
+                return `
+                  <div class="bar-item">
+                    <div class="bar-item-head">
+                      <span class="bar-item-name">${esc(displayModel(m.model, m.modelShort))}</span>
+                      <span class="bar-item-meta">${esc(fmtTokens(m.totalTokens))} · ${m.cacheHitPct}% · ${m.costUsd !== null && m.costUsd !== undefined ? `~${esc(fmtUsd(m.costUsd))}` : '--'}</span>
+                    </div>
+                    <div class="mini-track"><div class="mini-fill" style="width:${w}%"></div></div>
+                  </div>`;
+              })
+              .join('')
+          : `<div class="card-sub">${esc(t('noDataRange'))}</div>`;
+
+        const recentRows = convs.length
+          ? convs
+              .slice(0, 15)
+              .map(
+                (c) => `
+                <button type="button" class="conv-row${c.conversationId === activeId ? ' selected' : ''}" data-open-conv="${esc(c.conversationId)}">
+                  <div class="conv-row-top">
+                    <span class="conv-row-title">${c.isActive ? '● ' : ''}${esc(c.title)}</span>
+                    <span class="card-sub pill-mono">${esc(fmtTokens(c.totalTokens))}</span>
+                  </div>
+                  <div class="conv-row-meta">
+                    <span>${esc(c.latestModelShort || '--')} · ${c.modelStepCount} ${esc(t('stepsUnit'))}</span>
+                    <span>${esc(fmtShortDate(c.lastActivityMs))}</span>
+                  </div>
+                </button>`
+              )
+              .join('')
+          : `<div class="card-sub">${esc(t('noChatTitle'))}</div>`;
+
+        el.innerHTML = `
+          <div class="toolbar">
+            <div class="segmented" role="group">${rangeBtns}</div>
+            <span class="card-sub pill-mono">${hist.conversationCount} ${esc(t('histChats'))} · ${hist.stepCount} ${esc(t('histCalls'))}</span>
+          </div>
+
+          <div class="kpi-grid">
+            <div class="kpi-card">
+              <span class="kpi-label">${esc(t('histTokens'))}</span>
+              <span class="kpi-value">${esc(fmtTokens(hist.totalTokens))}</span>
+              <span class="kpi-foot">${esc(t('segInput'))} ${esc(fmtTokens(hist.inputTokens))} · ${esc(t('segOutput'))} ${esc(fmtTokens(hist.outputTokens))}</span>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-label">${esc(t('kpiEstCost'))} / ${esc(t('kpiCacheHit'))}</span>
+              <span class="kpi-value">${hist.costUsd !== null && hist.costUsd !== undefined ? esc(fmtUsd(hist.costUsd)) : '--'}</span>
+              <span class="kpi-foot">${esc(t('kpiCacheHit'))} ${hist.cacheHitPct}%${hist.savedUsd ? ` · ${esc(t('savedByCache', { usd: fmtUsd(hist.savedUsd) }))}` : ''}</span>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <span class="card-title">${esc(t('histTrend'))}</span>
+              <div class="legend-row" style="margin:0;gap:7px;">
+                <span class="legend-item"><span class="swatch seg-input"></span>${esc(t('segInput'))}</span>
+                <span class="legend-item"><span class="swatch seg-cache"></span>${esc(t('segCache'))}</span>
+                <span class="legend-item"><span class="swatch seg-output"></span>${esc(t('segOutput'))}</span>
+              </div>
+            </div>
+            ${buildTrendSvg(hist.series)}
+          </div>
+
+          <div class="card">
+            <div class="card-head"><span class="card-title">${esc(t('histModels'))}</span></div>
+            <div class="list-stack">${modelRows}</div>
+          </div>
+
+          <div class="card">
+            <div class="card-head"><span class="card-title">${esc(t('histRecent'))}</span></div>
+            <div class="list-stack">${recentRows}</div>
+          </div>
+        `;
+
+        el.querySelectorAll('[data-range]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const nextRange = btn.getAttribute('data-range');
+            if (nextRange) postNative('setRange', { range: nextRange });
+          });
+        });
+
+        el.querySelectorAll('[data-open-conv]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const cid = btn.getAttribute('data-open-conv');
+            if (cid) {
+              postNative('selectConv', { conversationId: cid });
+              switchTab('overview');
+            }
+          });
+        });
+
+        const tip = el.querySelector('#chart-tooltip');
+        if (tip && Array.isArray(hist.series)) {
+          el.querySelectorAll('.chart-bar-group').forEach((grp) => {
+            grp.addEventListener('mouseenter', () => {
+              const item = hist.series[Number(grp.getAttribute('data-idx'))];
+              if (!item) return;
+              tip.textContent = `${item.label} | ${fmtTokens(item.totalTokens)} tok (${t('segInput')} ${fmtTokens(item.inputTokens)} · ${t('segCache')} ${fmtTokens(item.cacheReadTokens)} · ${t('segOutput')} ${fmtTokens(item.outputTokens)}) · ${item.steps} ${t('stepsUnit')}`;
+            });
+          });
+        }
+      }
+
+      function renderSteps() {
+        const el = $('view-steps');
+        const conv = state.data?.activeConversation;
+        const settings = state.data?.settings || {};
+        const order = settings.stepOrder === 'oldest' ? 'oldest' : 'newest';
+
+        const rawSteps = conv?.steps ? [...conv.steps] : [];
+        if (order === 'newest') rawSteps.reverse();
+
+        const q = state.stepQuery.trim().toLowerCase();
+        const filtered = q
+          ? rawSteps.filter((st) => {
+              if (st.model.toLowerCase().includes(q) || st.modelShort.toLowerCase().includes(q)) return true;
+              return (st.tools || []).some((tl) => tl.name.toLowerCase().includes(q));
+            })
+          : rawSteps;
+
+        const listHtml = filtered.length
+          ? filtered
+              .map((st) => {
+                const chips = [];
+                if (st.hasThinking) chips.push(`<span class="chip">${esc(t('thinkingTag'))}</span>`);
+                if (st.subagentCalls > 0) chips.push(`<span class="chip">${esc(t('subagentTag'))} ×${st.subagentCalls}</span>`);
+                for (const tl of st.tools || []) {
+                  if (tl.name === 'invoke_subagent') continue;
+                  chips.push(`<span class="chip">${esc(tl.name)}${tl.count > 1 ? ` <span class="chip-count">×${tl.count}</span>` : ''}</span>`);
+                }
+                const gapLabel = st.approxGapSec !== null && st.approxGapSec !== undefined ? ` · ~${st.approxGapSec}s` : '';
+                const cacheTone = st.cacheHitPct >= 75 ? 'tone-good' : st.cacheHitPct >= 40 ? 'tone-info' : 'tone-warn';
+
+                return `
+                  <div class="step-card">
+                    <div class="step-head">
+                      <div class="step-left">
+                        <span class="step-num">#${st.stepIndex}</span>
+                        <span class="step-model">${esc(displayModel(st.model, st.modelShort))}</span>
+                      </div>
+                      <span class="step-time">${esc(fmtClock(st.createdAtMs))}${esc(gapLabel)}${st.costUsd !== null && st.costUsd !== undefined ? ` · ~${esc(fmtUsd(st.costUsd))}` : ''}</span>
+                    </div>
+                    <div class="step-metrics">
+                      <div class="step-metric">
+                        <span class="step-metric-label">${esc(t('stepInput'))}</span>
+                        <span class="step-metric-val">${esc(fmtTokens(st.inputTokens))}</span>
+                      </div>
+                      <div class="step-metric">
+                        <span class="step-metric-label">${esc(t('stepCache'))}</span>
+                        <span class="step-metric-val ${cacheTone}">${esc(fmtTokens(st.cacheReadTokens))} (${st.cacheHitPct}%)</span>
+                      </div>
+                      <div class="step-metric">
+                        <span class="step-metric-label">${esc(t('stepOutput'))}</span>
+                        <span class="step-metric-val">${esc(fmtTokens(st.outputTokens))}</span>
+                      </div>
+                      <div class="step-metric">
+                        <span class="step-metric-label">${esc(t('stepTotal'))}</span>
+                        <span class="step-metric-val">${esc(fmtTokens(st.totalTokens))}</span>
+                      </div>
+                    </div>
+                    ${chips.length ? `<div class="chip-wrap">${chips.join('')}</div>` : ''}
+                  </div>`;
+              })
+              .join('')
+          : `<div class="card empty-state">${esc(t('noSteps'))}</div>`;
+
+        const existingInput = el.querySelector('#step-search');
+        const keepFocus = document.activeElement === existingInput;
+        const cursorPos = keepFocus ? existingInput.selectionStart : null;
+
+        el.innerHTML = `
+          <div class="toolbar">
+            <input id="step-search" type="search" class="search-input" placeholder="${esc(t('searchSteps'))}" value="${esc(state.stepQuery)}" autocomplete="off">
+            <div class="segmented" role="group">
+              <button type="button" class="seg-btn${order === 'newest' ? ' active' : ''}" data-order="newest">${esc(t('orderNewest'))}</button>
+              <button type="button" class="seg-btn${order === 'oldest' ? ' active' : ''}" data-order="oldest">${esc(t('orderOldest'))}</button>
+            </div>
+          </div>
+          <div class="list-stack">${listHtml}</div>
+        `;
+
+        const searchEl = el.querySelector('#step-search');
+        if (searchEl) {
+          if (keepFocus) {
+            searchEl.focus();
+            if (cursorPos !== null) searchEl.setSelectionRange(cursorPos, cursorPos);
+          }
+          searchEl.addEventListener('input', (ev) => {
+            state.stepQuery = ev.target.value;
+            renderSteps();
+          });
+        }
+
+        el.querySelectorAll('[data-order]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const nextOrder = btn.getAttribute('data-order');
+            if (nextOrder && nextOrder !== order) {
+              postNative('updateSettings', { patch: { stepOrder: nextOrder } });
+              showToast(t('savedToast'));
+            }
+          });
+        });
+      }
+
+      function renderSettings() {
+        const el = $('view-settings');
+        const s = state.data?.settings || {};
+        const meta = state.data?.meta || {};
+        const accents = [
+          ['host', '#2563eb'],
+          ['blue', '#3b82f6'],
+          ['emerald', '#059669'],
+          ['violet', '#7c3aed'],
+          ['amber', '#d97706'],
+        ];
+        const limits = [200000, 256000, 512000, 1000000];
+        const checks = t('setSecurityChecks');
+
+        el.innerHTML = `
+          <div class="card">
+            <div class="card-head"><span class="card-title">${esc(t('setFloatingTitle'))}</span></div>
+
+            <div class="setting-row">
+              <div class="setting-label">
+                <span class="setting-name">${esc(t('setAutoShow'))}</span>
+                <span class="setting-desc">${esc(t('setAutoShowDesc'))}</span>
+              </div>
+              <div class="segmented">
+                <button type="button" class="seg-btn${s.onlyWhenAntigravityActive !== false ? ' active' : ''}" data-bool="onlyWhenAntigravityActive" data-val="true">${esc(t('optOnlyAgy'))}</button>
+                <button type="button" class="seg-btn${s.onlyWhenAntigravityActive === false ? ' active' : ''}" data-bool="onlyWhenAntigravityActive" data-val="false">${esc(t('optAlways'))}</button>
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div class="setting-label"><span class="setting-name">${esc(t('setDockSide'))}</span></div>
+              <div class="segmented">
+                <button type="button" class="seg-btn${s.dockSide === 'left' ? ' active' : ''}" data-set="dockSide" data-val="left">${esc(t('dockLeft'))}</button>
+                <button type="button" class="seg-btn${s.dockSide !== 'left' ? ' active' : ''}" data-set="dockSide" data-val="right">${esc(t('dockRight'))}</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head"><span class="card-title">${esc(t('setAppearance'))}</span></div>
+
+            <div class="setting-row">
+              <div class="setting-label"><span class="setting-name">${esc(t('setLang'))}</span></div>
+              <div class="segmented">
+                <button type="button" class="seg-btn${s.language === 'th' ? ' active' : ''}" data-set="language" data-val="th">ไทย</button>
+                <button type="button" class="seg-btn${s.language !== 'th' ? ' active' : ''}" data-set="language" data-val="en">EN</button>
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div class="setting-label"><span class="setting-name">${esc(t('setFont'))}</span></div>
+              <div class="segmented">
+                <button type="button" class="seg-btn${s.fontScale === 'sm' ? ' active' : ''}" data-set="fontScale" data-val="sm">${esc(t('fontSm'))}</button>
+                <button type="button" class="seg-btn${s.fontScale === 'md' ? ' active' : ''}" data-set="fontScale" data-val="md">${esc(t('fontMd'))}</button>
+                <button type="button" class="seg-btn${s.fontScale === 'lg' ? ' active' : ''}" data-set="fontScale" data-val="lg">${esc(t('fontLg'))}</button>
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div class="setting-label"><span class="setting-name">${esc(t('setAccent'))}</span></div>
+              <div class="accent-dots">
+                ${accents.map(([k, color]) => `<button type="button" class="accent-dot${(s.accent || 'host') === k ? ' active' : ''}" style="background:${color}" title="${k}" aria-label="${k}" data-set="accent" data-val="${k}"></button>`).join('')}
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div class="setting-label"><span class="setting-name">${esc(t('setModelMode'))}</span></div>
+              <div class="segmented">
+                <button type="button" class="seg-btn${s.modelNameMode !== 'full' ? ' active' : ''}" data-set="modelNameMode" data-val="short">${esc(t('modelShort'))}</button>
+                <button type="button" class="seg-btn${s.modelNameMode === 'full' ? ' active' : ''}" data-set="modelNameMode" data-val="full">${esc(t('modelFull'))}</button>
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div class="setting-label">
+                <span class="setting-name">${esc(t('setCtxLimit'))}</span>
+                <span class="setting-desc">${esc(t('setCtxLimitDesc'))}</span>
+              </div>
+              <div class="segmented">
+                ${limits.map((lim) => `<button type="button" class="seg-btn${Number(s.contextRefLimit) === lim ? ' active' : ''}" data-set="contextRefLimit" data-val="${lim}">${esc(fmtTokens(lim))}</button>`).join('')}
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <span class="card-title">${esc(t('setSecurityTitle'))}</span>
+              <span class="badge-offline">${esc(t('offlineBadge'))}</span>
+            </div>
+            <div class="audit-box">
+              ${Array.isArray(checks) ? checks.map((line) => `<div>✓ ${esc(line)}</div>`).join('') : ''}
+              <div style="margin-top:4px;font-weight:500;">${esc(t('setReadDir'))}:</div>
+              <div class="audit-path">${esc(meta.brainDir || '--')}</div>
+              <div style="margin-top:2px;font-weight:500;">${esc(t('setSettingsFile'))}:</div>
+              <div class="audit-path">${esc(meta.settingsFile || '--')}</div>
+              <div class="card-sub">${esc(t('setScanned', { n: meta.scannedConversations || 0, p: meta.pricingEntries || 0 }))}</div>
+            </div>
+          </div>
+
+          <div class="note-box">${esc(t('setLimitations'))}</div>
+
+          <div>
+            <button type="button" class="btn-secondary" id="reset-settings-btn">${esc(t('resetBtn'))}</button>
+          </div>
+        `;
+
+        el.querySelectorAll('[data-set]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const key = btn.getAttribute('data-set');
+            const rawVal = btn.getAttribute('data-val');
+            const val = key === 'contextRefLimit' ? Number(rawVal) : rawVal;
+            postNative('updateSettings', { patch: { [key]: val } });
+            showToast(t('savedToast'));
+          });
+        });
+
+        el.querySelectorAll('[data-bool]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const key = btn.getAttribute('data-bool');
+            const val = btn.getAttribute('data-val') === 'true';
+            postNative('updateSettings', { patch: { [key]: val } });
+            showToast(t('savedToast'));
+          });
+        });
+
+        const resetBtn = el.querySelector('#reset-settings-btn');
+        if (resetBtn) {
+          resetBtn.addEventListener('click', () => {
+            postNative('resetSettings');
+            showToast(t('resetToast'));
+          });
+        }
+      }
+
+      function renderAll() {
+        renderChrome();
+        if (state.tab === 'overview') renderOverview();
+        else if (state.tab === 'history') renderHistory();
+        else if (state.tab === 'steps') renderSteps();
+        else if (state.tab === 'settings') renderSettings();
+      }
+
+      function switchTab(nextTab) {
+        state.tab = nextTab;
+        document.querySelectorAll('.tab').forEach((btn) => {
+          const active = btn.dataset.tab === nextTab;
+          btn.classList.toggle('active', active);
+          btn.setAttribute('aria-selected', active ? 'true' : 'false');
+        });
+        document.querySelectorAll('.view').forEach((sec) => {
+          sec.classList.toggle('active', sec.id === `view-${nextTab}`);
+        });
+        renderAll();
+      }
+
+      function decodeBase64Utf8(b64) {
+        const bin = atob(b64);
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        return new TextDecoder('utf-8').decode(bytes);
+      }
+
+      window.__gravihudReceiveBase64 = (b64, darkMode) => {
+        try {
+          const payload = JSON.parse(decodeBase64Utf8(b64));
+          state.data = payload;
+          applyAppearance(payload?.settings, darkMode);
+          renderAll();
+        } catch {
+          // Ignore malformed push
+        }
+        $('refresh-btn')?.classList.remove('spinning');
+      };
+
+      window.__gravihudSetTheme = (darkMode) => {
+        applyAppearance(state.data?.settings, darkMode);
+      };
+
+      document.querySelectorAll('.tab').forEach((btn) => {
+        btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+      });
+
+      $('refresh-btn').addEventListener('click', () => {
+        $('refresh-btn').classList.add('spinning');
+        postNative('refresh');
+      });
+
+      $('conv-select').addEventListener('change', (ev) => {
+        postNative('selectConv', { conversationId: ev.target.value });
+      });
+
+      applyAppearance(null, null);
+      postNative('ready');
+    })();
+  </script>
+</body>
+</html>
