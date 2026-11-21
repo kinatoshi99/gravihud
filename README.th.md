@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/logo.svg" width="88" height="88" alt="GraviHUD logo" />
+  <img src="assets/logo.svg" width="84" height="84" alt="GraviHUD logo" />
 </p>
 
 <h1 align="center">GraviHUD</h1>
@@ -9,7 +9,11 @@
 </p>
 
 <p align="center">
-  <a href="README.md">English</a> · <strong>ภาษาไทย</strong> · <a href="SECURITY.md">นโยบายความปลอดภัย</a>
+  <a href="README.md">English</a> · <strong>ภาษาไทย</strong> · <a href="SECURITY.md">นโยบายความปลอดภัย</a> · <a href="CHANGELOG.md">Changelog</a>
+</p>
+
+<p align="center">
+  <img src="assets/preview.png" width="900" alt="ภาพตัวอย่างแผงลอย GraviHUD และการ์ดจิ๋วติดขอบจอ" />
 </p>
 
 ---
@@ -37,26 +41,33 @@
   - **แท็บประวัติ (History):** กราฟแนวโน้มแบบโต้ตอบได้ (`วันนี้ / 7 วัน / 30 วัน / ทั้งหมด`), อันดับโมเดล และรายการแชทล่าสุด
   - **แท็บทีละขั้น (Steps):** ค้นหาและไล่ดูรายละเอียดแต่ละรอบพร้อมชื่อเครื่องมือและระยะเวลาห่าง
   - **แท็บตั้งค่า (Settings):** สลับโหมดการแสดงผล, ย้ายขอบซ้าย/ขวา, สลับภาษา **ไทย / EN**, ปรับขนาดตัวอักษร, เลือกสีเน้น, ปรับเพดานอ้างอิง Context และดูการ์ดตรวจความปลอดภัย
-- **ควบคุมจาก Menu Bar ด้านบนของ Mac:** ไม่มีไอคอนรกบน Dock และรองรับโหมดมืด/สว่างของ macOS อัตโนมัติ
+- **รองรับทั้ง Apple Silicon และ Intel Mac (Universal Binary):** พร้อมไอคอนแอป native และควบคุมจาก Menu Bar ด้านบนของ Mac
 
 ---
 
 ## วิธีติดตั้งและใช้งาน
 
-ต้องใช้ **macOS 13.0+** และมี Command Line Tools (`swiftc`) ในเครื่อง (ไม่ต้องลงแพ็กเกจภายนอกแม้แต่ตัวเดียว):
+### วิธีที่ 1 — คอมไพล์จากโค้ดในเครื่องตัวเอง *(แนะนำ · ไม่ติด Gatekeeper)*
+
+ใช้ **macOS 13.0+** และ Command Line Tools (`swiftc`) ไม่ต้องลงไลบรารีภายนอกเลย:
 
 ```bash
 git clone https://github.com/kinatoshi99/gravihud.git
 cd gravihud
 chmod +x build.sh
-./build.sh --run
-```
-
-### (ตัวเลือก) ติดตั้งเข้าโฟลเดอร์ `/Applications`
-
-```bash
 ./build.sh --install --run
 ```
+
+### วิธีที่ 2 — ดาวน์โหลดไฟล์พร้อมใช้งานจาก GitHub Releases
+
+1. ดาวน์โหลด `GraviHUD-v1.0.0-macos-universal.zip` และ `SHA256SUMS.txt` จากหน้า [GitHub Releases](https://github.com/kinatoshi99/gravihud/releases)
+2. ตรวจสอบแฮชและปลดล็อก quarantine ของเบราว์เซอร์ (เพราะเป็นแอป Open Source ฟรีแบบ ad-hoc signed):
+   ```bash
+   shasum -a 256 -c SHA256SUMS.txt
+   unzip GraviHUD-v1.0.0-macos-universal.zip
+   xattr -cr GraviHUD.app
+   open GraviHUD.app
+   ```
 
 ### (ตัวเลือก) ให้รันรอเงียบๆ บน Menu Bar อัตโนมัติทุกครั้งที่เปิดเครื่อง Mac
 
@@ -91,4 +102,4 @@ lsof -nP -i -a -p "$PID"
 
 ## ลิขสิทธิ์
 
-เผยแพร่ภายใต้สัญญาอนุญาต [MIT License](LICENSE)
+เผยแพร่ภายใต้สัญญาอนุญาต [MIT License](LICENSE) ใช้งานฟรี ตรวจสอบโค้ดและพัฒนาต่อได้อย่างอิสระ

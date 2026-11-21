@@ -8,7 +8,7 @@ on:
 
 jobs:
   audit-test-build:
-    name: Security Audit, Unit Tests & macOS Build
+    name: Security Audit, Unit Tests & Universal macOS Build
     runs-on: macos-15
 
     steps:
@@ -31,10 +31,15 @@ jobs:
             -o /tmp/gravihud_tests
           /tmp/gravihud_tests
 
-      - name: Build GraviHUD.app
+      - name: Build Universal GraviHUD.app (arm64 + x86_64)
         run: |
           chmod +x build.sh
-          ./build.sh
+          ./build.sh --universal
           test -x "build/GraviHUD.app/Contents/MacOS/GraviHUD"
           test -f "build/GraviHUD.app/Contents/Resources/panel.html"
+          test -f "build/GraviHUD.app/Contents/Resources/AppIcon.icns"
           test -f "build/GraviHUD.app/Contents/Info.plist"
+          ARCHS="$(lipo -archs "build/GraviHUD.app/Contents/MacOS/GraviHUD")"
+          echo "Built architectures: ${ARCHS}"
+          echo "${ARCHS}" | grep -q "arm64"
+          echo "${ARCHS}" | grep -q "x86_64"

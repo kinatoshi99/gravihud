@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/logo.svg" width="88" height="88" alt="GraviHUD logo" />
+  <img src="assets/logo.svg" width="84" height="84" alt="GraviHUD logo" />
 </p>
 
 <h1 align="center">GraviHUD</h1>
@@ -10,14 +10,19 @@
 
 <p align="center">
   <a href="https://github.com/kinatoshi99/gravihud/actions/workflows/ci.yml"><img src="https://github.com/kinatoshi99/gravihud/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <img src="https://img.shields.io/badge/macOS-13%2B-000000?logo=apple" alt="macOS 13+">
+  <a href="https://github.com/kinatoshi99/gravihud/releases"><img src="https://img.shields.io/github/v/release/kinatoshi99/gravihud?color=2563EB" alt="Release"></a>
+  <img src="https://img.shields.io/badge/macOS-13%2B%20(Universal)-000000?logo=apple" alt="macOS 13+ Universal">
   <img src="https://img.shields.io/badge/Swift-Zero%20Dependencies-F05138?logo=swift&logoColor=white" alt="Zero Dependencies">
   <img src="https://img.shields.io/badge/Network-0%20Sockets%20%2F%20Offline-16A34A" alt="100% Offline">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT License"></a>
 </p>
 
 <p align="center">
-  <strong>English</strong> · <a href="README.th.md">ภาษาไทย (Thai)</a> · <a href="SECURITY.md">Security Model</a>
+  <strong>English</strong> · <a href="README.th.md">ภาษาไทย (Thai)</a> · <a href="SECURITY.md">Security Model</a> · <a href="CHANGELOG.md">Changelog</a>
+</p>
+
+<p align="center">
+  <img src="assets/preview.png" width="900" alt="GraviHUD floating panel and compact edge card preview" />
 </p>
 
 ---
@@ -46,31 +51,35 @@ Most usage-monitor hacks rely on injecting scripts into Electron windows via rem
   - **Steps Tab:** Searchable per-step inspector with Input / Cache / Output / Total tokens, timing gaps, thinking/subagent badges, and tool chips.
   - **Settings Tab:** Floating mode & edge dock, **English / ไทย (Thai)** language switch (auto-detected from macOS locale), font size, accent colors, full vs short model names, context meter reference limit, and built-in security audit card.
 - **Auto-Follows Active Chat:** Automatically tracks the most recently updated conversation as you switch chats, or lets you pin any historical chat from the dropdown.
-- **Native macOS Polish:** Automatic Light/Dark frosted glass (`NSVisualEffectView`), Menu Bar icon (`LSUIElement` — zero Dock clutter), and single-instance reopen handling.
+- **Native macOS Polish:** Automatic Light/Dark frosted glass (`NSVisualEffectView`), Menu Bar icon (`LSUIElement` — zero Dock clutter), native `AppIcon.icns`, Universal binary (`arm64` + `x86_64`), and single-instance reopen handling.
 
 ---
 
-## Quick Start
+## Install & Run
 
-### Requirements
+### Option 1 — Build Locally from Source *(Recommended · Zero Gatekeeper Prompts)*
 
-- **macOS 13.0+** (Apple Silicon or Intel)
-- **Xcode Command Line Tools** (`swiftc` — already included if you have Xcode or ran `xcode-select --install`)
-
-### Build & Run (Zero Third-Party Dependencies)
+Requires **macOS 13.0+** and Apple Command Line Tools (`swiftc`). Zero external packages needed:
 
 ```bash
 git clone https://github.com/kinatoshi99/gravihud.git
 cd gravihud
 chmod +x build.sh
-./build.sh --run
-```
-
-### Optional: Install to `/Applications`
-
-```bash
 ./build.sh --install --run
 ```
+
+*(Use `./build.sh --run` to run directly from `build/GraviHUD.app` without copying to `/Applications`, or `./build.sh --universal` to compile a Universal `arm64 + x86_64` binary.)*
+
+### Option 2 — Download Prebuilt Universal Binary (GitHub Releases)
+
+1. Download `GraviHUD-v1.0.0-macos-universal.zip` and `SHA256SUMS.txt` from [GitHub Releases](https://github.com/kinatoshi99/gravihud/releases).
+2. Verify checksum & clear macOS browser quarantine (since this free open-source release is ad-hoc signed, not Apple-notarized):
+   ```bash
+   shasum -a 256 -c SHA256SUMS.txt
+   unzip GraviHUD-v1.0.0-macos-universal.zip
+   xattr -cr GraviHUD.app
+   open GraviHUD.app
+   ```
 
 ### Optional: Auto-Start Quietly at macOS Login (Opt-In LaunchAgent)
 
@@ -81,7 +90,7 @@ chmod +x scripts/install-login-item.sh
 ./scripts/install-login-item.sh
 ```
 
-To remove the login item at any time:
+Remove the login item at any time:
 
 ```bash
 ./scripts/install-login-item.sh --uninstall
@@ -91,7 +100,7 @@ To remove the login item at any time:
 
 ## Verify Zero-Network Security Yourself
 
-Every commit and Pull Request runs [scripts/security-audit.sh](scripts/security-audit.sh) in GitHub Actions CI. You can verify both the source and the live running binary yourself:
+Every commit and Pull Request runs [scripts/security-audit.sh](scripts/security-audit.sh) in GitHub Actions CI. You can audit both the source and the live running binary yourself:
 
 ```bash
 # 1. Static source audit (must report PASS)
@@ -102,7 +111,7 @@ PID=$(pgrep -x GraviHUD | head -n 1)
 lsof -nP -i -a -p "$PID"
 ```
 
-See [SECURITY.md](SECURITY.md) for the full threat model and file boundaries.
+See [SECURITY.md](SECURITY.md) for the full security model and file boundaries.
 
 ---
 
@@ -131,14 +140,19 @@ gravihud/
 ├── Resources/
 │   └── panel.html                    # Self-contained zero-network 4-tab UI (strict CSP)
 ├── Tests/
-│   └── run_tests.swift               # Deterministic Swift unit tests (zero external test dependencies)
+│   └── run_tests.swift               # 8 deterministic Swift unit tests (zero external test dependencies)
 ├── scripts/
+│   ├── generate-icon.swift           # Pure CoreGraphics macOS AppIcon generator
 │   ├── security-audit.sh             # Static zero-network / zero-shell / zero-credential verifier
-│   └── install-login-item.sh         # Opt-in per-user macOS LaunchAgent installer/uninstaller
-├── .github/workflows/ci.yml          # Automated macOS CI: audit + unit tests + build
-├── build.sh                          # Reproducible standalone .app bundle builder
+│   ├── install-login-item.sh         # Opt-in per-user macOS LaunchAgent installer/uninstaller
+│   └── release-notes.sh              # Release notes generator for CI
+├── .github/workflows/
+│   ├── ci.yml                        # macOS CI: audit + 8 unit tests + Universal build
+│   └── release.yml                   # Automated Universal release zip + SHA-256 checksums on v* tags
+├── build.sh                          # Standalone .app bundle builder (--universal / --install / --run / --zip)
 ├── SECURITY.md
 ├── CONTRIBUTING.md
+├── CHANGELOG.md
 └── LICENSE
 ```
 
@@ -157,4 +171,4 @@ gravihud/
 
 ## License
 
-Released under the [MIT License](LICENSE).
+Released under the [MIT License](LICENSE). Free to use, audit, fork, and modify.

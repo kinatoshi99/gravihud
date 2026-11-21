@@ -1,0 +1,54 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build Universal macOS App & Publish GitHub Release
+    runs-on: macos-15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Static Zero-Network & Zero-Shell Audit
+        run: |
+          chmod +x scripts/security-audit.sh
+          ./scripts/security-audit.sh
+
+      - name: Run Swift Unit Tests
+        run: |
+          swiftc -parse-as-library \
+            Sources/Models.swift \
+            Sources/Pricing.swift \
+            Sources/TranscriptParser.swift \
+            Sources/SettingsStore.swift \
+            Tests/run_tests.swift \
+            -o /tmp/gravihud_tests
+          /tmp/gravihud_tests
+
+      - name: Build Universal GraviHUD.app & Package Zip
+        run: |
+          chmod +x build.sh
+          ./build.sh --universal --zip
+          ls -lh build/
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          chmod +x scripts/release-notes.sh
+          ZIP_FILE="$(ls build/GraviHUD-*-macos-universal.zip | head -n 1)"
+          ./scripts/release-notes.sh "${TAG}" "${ZIP_FILE}" build/SHA256SUMS.txt > /tmp/release_notes.md
+          gh release create "${TAG}" \
+            "${ZIP_FILE}" \
+            build/SHA256SUMS.txt \
+            --title "GraviHUD ${TAG}" \
+            --notes-file /tmp/release_notes.md
