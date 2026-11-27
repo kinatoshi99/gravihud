@@ -36,6 +36,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 @main
 struct GraviHUDApp {
     static func main() {
+        if CommandLine.arguments.contains("--notify-ensure") {
+            DistributedNotificationCenter.default().postNotificationName(
+                FloatingPanelController.ensureNotificationName,
+                object: nil,
+                userInfo: nil,
+                deliverImmediately: true
+            )
+            RunLoop.current.run(until: Date().addingTimeInterval(0.02))
+            return
+        }
+
         let app = NSApplication.shared
         let delegate = AppDelegate()
         app.delegate = delegate

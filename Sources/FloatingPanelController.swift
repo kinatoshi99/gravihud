@@ -348,6 +348,7 @@ final class CompactEdgeCardView: NSView {
 @MainActor
 final class FloatingPanelController: NSObject, NSWindowDelegate, WebUIBridgeDelegate {
     static let showNotificationName = Notification.Name("dev.kinatoshi99.gravihud.show")
+    static let ensureNotificationName = Notification.Name("dev.kinatoshi99.gravihud.ensure")
     private static let antigravityBundlePrefix = "com.google.antigravity"
     private static let edgeMargin: CGFloat = 12
     private static let expandedWidth: CGFloat = 368
@@ -610,6 +611,12 @@ final class FloatingPanelController: NSObject, NSWindowDelegate, WebUIBridgeDele
             name: Self.showNotificationName,
             object: nil
         )
+        DistributedNotificationCenter.default().addObserver(
+            self,
+            selector: #selector(handleEnsureVisibleForSession),
+            name: Self.ensureNotificationName,
+            object: nil
+        )
 
         appearanceObservation = NSApp.observe(\.effectiveAppearance, options: [.new]) { [weak self] _, _ in
             Task { @MainActor in
@@ -723,6 +730,13 @@ final class FloatingPanelController: NSObject, NSWindowDelegate, WebUIBridgeDele
     }
 
     @objc private func workspaceDidChange(_ note: Notification) {
+        if note.name == NSWorkspace.didLaunchApplicationNotification
+            || note.name == NSWorkspace.didTerminateApplicationNotification,
+           let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
+           isAntigravityApp(app) {
+            userManuallyHidden = false
+        }
+
         let activatedApp: NSRunningApplication?
         if note.name == NSWorkspace.didActivateApplicationNotification {
             activatedApp = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
@@ -749,6 +763,14 @@ final class FloatingPanelController: NSObject, NSWindowDelegate, WebUIBridgeDele
         scheduleFullScreenSettleReassert()
         startPolling()
         updateMenuLabels()
+    }
+
+    @objc func handleEnsureVisibleForSession() {
+        userManuallyHidden = false
+        updateVisibilityForFrontmostApp(forceInitialShow: true)
+        if shouldBeVisibleNow() {
+            scheduleFullScreenSettleReassert()
+        }
     }
 
     // MARK: - Window Positioning, Collapse & Drag

@@ -60,23 +60,30 @@ chmod +x build.sh
 
 ### วิธีที่ 2 — ดาวน์โหลดไฟล์พร้อมใช้งานจาก GitHub Releases
 
-1. ดาวน์โหลด `GraviHUD-v1.0.0-macos-universal.zip` และ `SHA256SUMS.txt` จากหน้า [GitHub Releases](https://github.com/kinatoshi99/gravihud/releases)
-2. ตรวจสอบแฮชและปลดล็อก quarantine ของเบราว์เซอร์ (เพราะเป็นแอป Open Source ฟรีแบบ ad-hoc signed):
+1. ดาวน์โหลด `GraviHUD-v1.0.1-macos-universal.zip` และ `SHA256SUMS.txt` จากหน้า [GitHub Releases](https://github.com/kinatoshi99/gravihud/releases)
+2. ตรวจสอบแฮช ปลดล็อก quarantine และติดตั้งลง `/Applications`:
    ```bash
    shasum -a 256 -c SHA256SUMS.txt
-   unzip GraviHUD-v1.0.0-macos-universal.zip
+   unzip GraviHUD-v1.0.1-macos-universal.zip
    xattr -cr GraviHUD.app
-   open GraviHUD.app
+   cp -R GraviHUD.app /Applications/
+   open /Applications/GraviHUD.app
    ```
 
-### (ตัวเลือก) ให้รันรอเงียบๆ บน Menu Bar อัตโนมัติทุกครั้งที่เปิดเครื่อง Mac
+### (ตัวเลือก) ตั้งค่าบังคับเปิดอัตโนมัติทุกครั้งที่เปิดเครื่องและใช้งาน Antigravity
 
-```bash
-chmod +x scripts/install-login-item.sh
-./scripts/install-login-item.sh
-```
+1. ให้รันรอเงียบๆ บน Menu Bar อัตโนมัติตั้งแต่เปิดเครื่อง (ใส่ `--keep-alive` เพื่อให้ macOS ปลุกกลับมาเองหากแอปถูกปิด):
+   ```bash
+   chmod +x scripts/install-login-item.sh
+   ./scripts/install-login-item.sh --keep-alive
+   ```
+2. ผูก Global Hook ของ Antigravity (`SessionStart` + `PreInvocation` ใน `~/.gemini/config/hooks.json` แบบไม่กินโทเคนเพิ่ม) เพื่อบังคับปลุกแผงลอยทุกครั้งที่เริ่มแชทหรือส่งคำสั่งใน AGY:
+   ```bash
+   chmod +x scripts/install-agy-hook.sh
+   ./scripts/install-agy-hook.sh
+   ```
 
-*(ถ้าอยากยกเลิกภายหลัง รัน `./scripts/install-login-item.sh --uninstall`)*
+*(หากต้องการถอนการติดตั้งอัตโนมัติภายหลัง รัน `./scripts/install-login-item.sh --uninstall` และ `./scripts/install-agy-hook.sh --uninstall`)*
 
 ---
 

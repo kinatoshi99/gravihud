@@ -2,6 +2,16 @@
 
 All notable changes to **GraviHUD** are documented in this file.
 
+## [1.0.1] - 2026-11-27
+
+### Added
+- **Strict auto-launch mode (`--keep-alive`)** in `scripts/install-login-item.sh` so macOS `launchd` automatically respawns GraviHUD if it exits unexpectedly.
+- **Optional Antigravity lifecycle hook installer (`scripts/install-agy-hook.sh`)** registering zero-token `SessionStart` and `PreInvocation` hooks in `~/.gemini/config/hooks.json` so GraviHUD automatically launches and surfaces on every Antigravity session.
+- **`--notify-ensure` IPC flag** (`dev.kinatoshi99.gravihud.ensure`) to unhide the floating panel on new chat sessions while strictly respecting the *Only Show with Antigravity* setting.
+
+### Fixed
+- Automatically reset manual panel hide state (`X` button) whenever Antigravity quits or relaunches so reopening Antigravity always brings the floating HUD back.
+
 ## [1.0.0] - 2026-11-21
 
 ### Added

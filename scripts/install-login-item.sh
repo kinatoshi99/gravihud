@@ -7,12 +7,20 @@ LABEL="dev.kinatoshi99.gravihud"
 PLIST_PATH="${HOME}/Library/LaunchAgents/${LABEL}.plist"
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
-if [ "${1:-}" = "--uninstall" ]; then
-  launchctl bootout "gui/$(id -u)" "${PLIST_PATH}" 2>/dev/null || true
-  rm -f "${PLIST_PATH}"
-  echo "Removed LaunchAgent: ${PLIST_PATH}"
-  exit 0
-fi
+KEEP_ALIVE=false
+for arg in "$@"; do
+  case "$arg" in
+    --uninstall)
+      launchctl bootout "gui/$(id -u)" "${PLIST_PATH}" 2>/dev/null || true
+      rm -f "${PLIST_PATH}"
+      echo "Removed LaunchAgent: ${PLIST_PATH}"
+      exit 0
+      ;;
+    --keep-alive|--strict)
+      KEEP_ALIVE=true
+      ;;
+  esac
+done
 
 APP_BIN="/Applications/GraviHUD.app/Contents/MacOS/GraviHUD"
 if [ ! -x "${APP_BIN}" ]; then
@@ -25,6 +33,16 @@ if [ ! -x "${APP_BIN}" ]; then
 fi
 
 mkdir -p "${HOME}/Library/LaunchAgents"
+if [ "${KEEP_ALIVE}" = true ]; then
+  KEEP_ALIVE_XML="  <key>KeepAlive</key>
+  <true/>
+  <key>ThrottleInterval</key>
+  <integer>5</integer>"
+else
+  KEEP_ALIVE_XML="  <key>KeepAlive</key>
+  <false/>"
+fi
+
 cat > "${PLIST_PATH}" << EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -38,8 +56,7 @@ cat > "${PLIST_PATH}" << EOF
   </array>
   <key>RunAtLoad</key>
   <true/>
-  <key>KeepAlive</key>
-  <false/>
+${KEEP_ALIVE_XML}
 </dict>
 </plist>
 EOF

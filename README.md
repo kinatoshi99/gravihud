@@ -72,28 +72,37 @@ chmod +x build.sh
 
 ### Option 2 — Download Prebuilt Universal Binary (GitHub Releases)
 
-1. Download `GraviHUD-v1.0.0-macos-universal.zip` and `SHA256SUMS.txt` from [GitHub Releases](https://github.com/kinatoshi99/gravihud/releases).
+1. Download `GraviHUD-v1.0.1-macos-universal.zip` and `SHA256SUMS.txt` from [GitHub Releases](https://github.com/kinatoshi99/gravihud/releases).
 2. Verify checksum & clear macOS browser quarantine (since this free open-source release is ad-hoc signed, not Apple-notarized):
    ```bash
    shasum -a 256 -c SHA256SUMS.txt
-   unzip GraviHUD-v1.0.0-macos-universal.zip
+   unzip GraviHUD-v1.0.1-macos-universal.zip
    xattr -cr GraviHUD.app
-   open GraviHUD.app
+   cp -R GraviHUD.app /Applications/
+   open /Applications/GraviHUD.app
    ```
 
-### Optional: Auto-Start Quietly at macOS Login (Opt-In LaunchAgent)
+### Optional: Auto-Start at macOS Login & Every Antigravity Session
 
-Starts GraviHUD in your Menu Bar at login so the floating HUD appears automatically whenever you open Antigravity:
+Start GraviHUD quietly in your Menu Bar at login (pass `--keep-alive` if you want macOS `launchd` to automatically respawn it if quit):
 
 ```bash
 chmod +x scripts/install-login-item.sh
-./scripts/install-login-item.sh
+./scripts/install-login-item.sh --keep-alive
 ```
 
-Remove the login item at any time:
+You can also register a zero-token Antigravity global lifecycle hook (`SessionStart` + `PreInvocation` in `~/.gemini/config/hooks.json`) so GraviHUD automatically launches and surfaces whenever an Antigravity session starts:
+
+```bash
+chmod +x scripts/install-agy-hook.sh
+./scripts/install-agy-hook.sh
+```
+
+Remove either integration at any time:
 
 ```bash
 ./scripts/install-login-item.sh --uninstall
+./scripts/install-agy-hook.sh --uninstall
 ```
 
 ---
@@ -145,6 +154,7 @@ gravihud/
 │   ├── generate-icon.swift           # Pure CoreGraphics macOS AppIcon generator
 │   ├── security-audit.sh             # Static zero-network / zero-shell / zero-credential verifier
 │   ├── install-login-item.sh         # Opt-in per-user macOS LaunchAgent installer/uninstaller
+│   ├── install-agy-hook.sh           # Opt-in zero-token Antigravity lifecycle hook installer
 │   └── release-notes.sh              # Release notes generator for CI
 ├── .github/workflows/
 │   ├── ci.yml                        # macOS CI: audit + 8 unit tests + Universal build
